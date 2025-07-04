@@ -8,6 +8,8 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.config import Config
+from kivymd.app import MDApp
+from kivymd.uix.pickers import MDTimePickerDialVertical
 
 #NEEDS TO BE REMOVED B4 PROD:
 Window.size = (540, 1170)
@@ -20,8 +22,10 @@ class AlarmRoot(FloatLayout):
     def __init__(self, **kwargs):
         super(AlarmRoot, self).__init__(**kwargs)
         
+        # if storage == blank:
         self.alarm_count = 0
-        
+        # should have stuff save to storage whenever pause app or smth, load on run
+
         self.new_alarm_button = Button(text='+', 
                                        font_size=TENTH_WIDTH*1.2, 
                                        size_hint=(None, None),
@@ -52,22 +56,25 @@ class AlarmRoot(FloatLayout):
 
     def add_alarm(self, instance):
         self.alarm_count += 1
-        
+
         new_alarm = FloatLayout(size_hint_y=None, height=Window.height//8)
         new_alarm.id = self.alarm_count
         new_alarm.time = 800
-        
+
         new_alarm.x_button = Button(text='X',
                                     font_size=TENTH_WIDTH,
                                     size_hint=(None, None), 
                                     size=(Window.width//10, Window.height//8), 
                                     pos_hint={'left':0, 'center_y':0.5})
-        new_alarm.time_button = Button(text='8:00', 
+        new_alarm.time_button = Button(text='8:00 AM', 
                                        font_size=TENTH_WIDTH*1.2,
                                        size_hint=(None, None),
                                        size=((Window.width//10)*4,
                                              (Window.height//8)),
                                        pos_hint={'right':0.5, 'center_y':0.5})
+        new_alarm.time_button.bind(
+                on_press=lambda instance:self.run_time_picker(new_alarm))
+
         new_alarm.vol_button = Button(text='V', 
                                        font_size=TENTH_WIDTH,
                                        size_hint=(None, None),
@@ -87,9 +94,36 @@ class AlarmRoot(FloatLayout):
         new_alarm.add_widget(new_alarm.on_button)
 
         self.alarm_grid.add_widget(new_alarm)
+
+
+    def set_alarm_time(self, alarm, time_picker):        
+        alarm.time = 0
+        if (time_picker.am_pm == 'pm'): 
+            alarm.time += 1200
+        if (time_picker.hour != '12'):
+            alarm.time += int(time_picker.hour) * 100
+        alarm.time += int(time_picker.minute)
+         
+        half = 'AM'
+        if (time_picker.am_pm == 'pm'): half = 'PM'
+        
+        minute = time_picker.minute
+        if (int(minute) < 10): minute = f'0{minute}' 
+        
+        alarm.time_button.text = f'{time_picker.hour}:{minute} {half}'
+
+        time_picker.dismiss()
+                    
+
+    def run_time_picker(self, alarm):
+        time_picker = MDTimePickerDialVertical()
+        time_picker.bind(
+                on_ok=lambda *args: self.set_alarm_time(alarm, time_picker))
+        time_picker.open()
+        #remember to set text
         
 
-class AlarmApp(App):
+class AlarmApp(MDApp):
     def build(self):
         return AlarmRoot()
 
