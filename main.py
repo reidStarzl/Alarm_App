@@ -9,8 +9,8 @@ from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.config import Config
 from kivymd.app import MDApp
-# from timepicker import MDTimePickerDialVertical
-from kivymd.uix.pickers.timepicker import MDTimePickerDialVertical
+from kivymd.uix.slider import MDSlider
+from timepicker import MDTimePickerDialVertical
 import datetime
 
 #NEEDS TO BE REMOVED B4 PROD:
@@ -63,6 +63,8 @@ class AlarmRoot(FloatLayout):
         new_alarm = FloatLayout(size_hint_y=None, height=Window.height//8)
         new_alarm.id = self.alarm_count
         new_alarm.time = 800
+        new_alarm.is_on = True
+        new_alarm.volume = 50
 
         new_alarm.x_button = Button(text='X',
                                     font_size=TENTH_WIDTH,
@@ -84,13 +86,18 @@ class AlarmRoot(FloatLayout):
                                        size=((Window.width//10),
                                              (Window.height//8)),
                                        pos_hint={'right':0.6, 'center_y':0.5})
+        new_alarm.vol_button.bind(
+                on_press=lambda instance:self.volume_menu(new_alarm))
+
         new_alarm.on_button = Button(text='On', 
                                        font_size=TENTH_WIDTH,
                                        size_hint=(None, None),
                                        size=((Window.width//10)*3,
                                              (Window.height//8)),
                                        pos_hint={'right':1, 'center_y':0.5})
-        
+        new_alarm.on_button.bind(
+                on_press=lambda instance:self.toggle_on_off(new_alarm))
+
         new_alarm.add_widget(new_alarm.x_button)
         new_alarm.add_widget(new_alarm.time_button)
         new_alarm.add_widget(new_alarm.vol_button)
@@ -99,6 +106,28 @@ class AlarmRoot(FloatLayout):
         self.alarm_grid.add_widget(new_alarm)
 
         self.run_time_picker(new_alarm)
+
+
+    def volume_menu(self, alarm):
+        slider = MDSlider(min=0, max=100, value=alarm.volume, 
+                          size_hint=(0.8, 0.2), 
+                          pos_hint={'center_x':0.5, 'center_y':0.4})
+        slider.bind(
+                on_touch_up=lambda *args: self.volume_set(slider, alarm))
+
+        self.add_widget(slider)
+
+
+    def volume_set(self, slider, alarm):
+        alarm.volume = slider.value
+
+
+    def toggle_on_off(self, alarm):
+        if alarm.is_on:
+            alarm.on_button.text = 'Off'
+        else:
+            alarm.on_button.text = 'On'
+        alarm.is_on = not alarm.is_on
 
 
     def set_alarm_time(self, alarm, time_picker):        
