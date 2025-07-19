@@ -9,13 +9,16 @@ from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.config import Config
 from kivymd.app import MDApp
-from kivymd.uix.pickers import MDTimePickerDialVertical
+# from timepicker import MDTimePickerDialVertical
+from kivymd.uix.pickers.timepicker import MDTimePickerDialVertical
+import datetime
 
 #NEEDS TO BE REMOVED B4 PROD:
 Window.size = (540, 1170)
 #*half of actual phone
 
 TENTH_WIDTH = Window.width//10
+
 
 class AlarmRoot(FloatLayout):
 
@@ -95,6 +98,8 @@ class AlarmRoot(FloatLayout):
 
         self.alarm_grid.add_widget(new_alarm)
 
+        self.run_time_picker(new_alarm)
+
 
     def set_alarm_time(self, alarm, time_picker):        
         alarm.time = 0
@@ -111,17 +116,24 @@ class AlarmRoot(FloatLayout):
         if (int(minute) < 10): minute = f'0{minute}' 
         
         alarm.time_button.text = f'{time_picker.hour}:{minute} {half}'
-
+        
         time_picker.dismiss()
-                    
+    
 
     def run_time_picker(self, alarm):
         time_picker = MDTimePickerDialVertical()
+
+        time_picker.set_time(datetime.time(alarm.time // 100, alarm.time % 100))
+        
         time_picker.bind(
                 on_ok=lambda *args: self.set_alarm_time(alarm, time_picker))
+        time_picker.bind(
+                on_dismiss=lambda *args: time_picker.dismiss())
+        time_picker.bind(
+                on_cancel=lambda *args: time_picker.dismiss())
+       
         time_picker.open()
-        #remember to set text
-        
+
 
 class AlarmApp(MDApp):
     def build(self):
