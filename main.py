@@ -5,11 +5,17 @@ from kivy.uix.label import Label
 from kivy.core.window import Window
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.modalview import ModalView
 from kivy.config import Config
+from kivy.graphics import Color, Rectangle
+from kivy.properties import ColorProperty
+from kivy.properties import VariableListProperty
 from kivymd.app import MDApp
-from kivymd.uix.slider import MDSlider
+from kivymd.uix.label import MDLabel
+from kivy.uix.slider import Slider
 from timepicker import MDTimePickerDialVertical
 import datetime
 
@@ -109,13 +115,60 @@ class AlarmRoot(FloatLayout):
 
 
     def volume_menu(self, alarm):
-        slider = MDSlider(min=0, max=100, value=alarm.volume, 
-                          size_hint=(0.8, 0.2), 
-                          pos_hint={'center_x':0.5, 'center_y':0.4})
+        scrim = ModalView(auto_dismiss=False,
+                          size_hint=(1.2, 1.2), 
+                          pos_hint={'center_x':0.5, 'center_y':0.5},
+                          background_color=[0, 0, 0, 0.5]) 
+        
+        background = BoxLayout(size_hint=(0.8, 0.4),
+                               pos_hint={'center_x':0.5, 'center_y':0.5})
+        with background.canvas.before:
+            Color(0.2, 0.2, 0.2, 1)
+            background.rect = Rectangle(pos=background.pos, size=background.size)
+        background.bind(pos=self.update_rect, size=self.update_rect)
+        touch_blocker = Button(background_color=(0, 0, 0, 0), disabled=True)
+        background.add_widget(touch_blocker)
+
+        menu = BoxLayout(orientation='vertical',
+                         size_hint=(0.8, 0.4),
+                         pos_hint={'center_x':0.5, 'center_y':0.5})
+        
+        sound_label = Label(text="Alarm Sound")
+
+        sound_button = Button(text="None Set")
+       
+        volume_label = Label(text="Volume")
+
+        slider = Slider(min=0, max=100, 
+                        value=alarm.volume,
+                        background_width=TENTH_WIDTH) 
+                        #size_hint=(0.8, 0.2), 
+                        #pos_hint={'center_x':0.5, 'center_y':0.4})
+
+        scrim.bind(
+                on_touch_down=lambda *args: 
+                self.disable_volume_menu(scrim, background, menu))
         slider.bind(
                 on_touch_up=lambda *args: self.volume_set(slider, alarm))
 
-        self.add_widget(slider)
+        self.add_widget(scrim)
+        self.add_widget(background)
+        self.add_widget(menu)
+        menu.add_widget(sound_label)
+        menu.add_widget(sound_button)
+        menu.add_widget(volume_label)
+        menu.add_widget(slider)
+
+
+    def update_rect(self, instance, value):
+        instance.rect.pos = instance.pos
+        instance.rect.size = instance.size
+
+    
+    def disable_volume_menu(self, scrim, background, menu):
+        self.remove_widget(scrim)
+        self.remove_widget(background)
+        self.remove_widget(menu)
 
 
     def volume_set(self, slider, alarm):
