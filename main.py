@@ -65,18 +65,23 @@ class AlarmRoot(FloatLayout):
 
     def add_alarm(self, instance):
         self.alarm_count += 1
-
+        
         new_alarm = FloatLayout(size_hint_y=None, height=Window.height//8)
-        new_alarm.id = self.alarm_count
+        new_alarm.id = self.alarm_count #VERY BAD NEED TO CHANGE
         new_alarm.time = 800
         new_alarm.is_on = True
         new_alarm.volume = 50
+        
+        new_alarm.is_first_time_pick = True
 
         new_alarm.x_button = Button(text='X',
                                     font_size=TENTH_WIDTH,
                                     size_hint=(None, None), 
                                     size=(Window.width//10, Window.height//8), 
                                     pos_hint={'left':0, 'center_y':0.5})
+        new_alarm.x_button.bind(
+                on_press=lambda instance:self.delete_alarm(new_alarm))
+
         new_alarm.time_button = Button(text='8:00 AM', 
                                        font_size=TENTH_WIDTH*1.2,
                                        size_hint=(None, None),
@@ -111,7 +116,60 @@ class AlarmRoot(FloatLayout):
 
         self.alarm_grid.add_widget(new_alarm)
 
+        self.sort_alarms()
+
         self.run_time_picker(new_alarm)
+
+        if self.alarm_count >= 8:
+            self.alarm_scroller.scroll_to(new_alarm)
+
+
+    def delete_alarm(self, alarm):
+        alarm.clear_widgets()
+        self.alarm_grid.remove_widget(alarm)
+        self.alarm_count -= 1
+
+    def sort_alarms(self):
+        alarm_list = []
+
+        for alarm in self.alarm_grid.children:
+            alarm_list.append(alarm)
+
+        sorted_alarms = self.merge_sort(alarm_list)
+
+        for alarm in sorted_alarms:
+            self.alarm_grid.remove_widget(alarm)
+            self.alarm_grid.add_widget(alarm)
+
+
+    def merge_sort(self, alarms):
+        length = len(alarms)
+        if length <= 1:
+            return alarms
+
+        middle = length // 2
+
+        left = self.merge_sort(alarms[:middle])
+        right = self.merge_sort(alarms[middle:])
+
+        return self.merge(left, right)
+
+
+    def merge(self, left, right):
+        merge_list = []
+
+        while left != [] and right != []:
+            if left[0].time <= right[0].time:
+                merge_list.append(left.pop(0))
+            else:
+                merge_list.append(right.pop(0))
+
+        if left != []:
+            merge_list.extend(left)
+        else:
+            merge_list.extend(right)
+
+        return merge_list  
 
 
     def volume_menu(self, alarm):
@@ -199,8 +257,17 @@ class AlarmRoot(FloatLayout):
         
         alarm.time_button.text = f'{time_picker.hour}:{minute} {half}'
         
+        for alarm_child in self.alarm_grid.children:
+            if (alarm_child is not alarm) and (alarm_child.time == alarm.time):
+                self.delete_alarm(alarm_child)
+                break
+
+        self.sort_alarms()
+
+        alarm.is_first_time_pick = False
+
         time_picker.dismiss()
-    
+
 
     def run_time_picker(self, alarm):
         time_picker = MDTimePickerDialVertical()
@@ -210,11 +277,19 @@ class AlarmRoot(FloatLayout):
         time_picker.bind(
                 on_ok=lambda *args: self.set_alarm_time(alarm, time_picker))
         time_picker.bind(
-                on_dismiss=lambda *args: time_picker.dismiss())
+                on_dismiss=lambda *args: 
+                self.dismiss_time_picker(alarm, time_picker))
         time_picker.bind(
-                on_cancel=lambda *args: time_picker.dismiss())
+                on_cancel=lambda *args:
+                self.dismiss_time_picker(alarm, time_picker))
        
         time_picker.open()
+
+
+    def dismiss_time_picker(self, alarm, time_picker):
+        if alarm.is_first_time_pick:
+            self.delete_alarm(alarm)
+        time_picker.dismiss()
 
 
 class AlarmApp(MDApp):
