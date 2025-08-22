@@ -17,6 +17,7 @@ from kivymd.app import MDApp
 from kivymd.uix.label import MDLabel
 from kivy.uix.slider import Slider
 from timepicker import MDTimePickerDialVertical
+from kivy.clock import Clock
 import datetime
 
 #NEEDS TO BE REMOVED B4 PROD:
@@ -61,7 +62,9 @@ class AlarmRoot(FloatLayout):
         self.add_widget(self.new_alarm_button)
         self.add_widget(self.title_bar)
         self.add_widget(self.alarm_scroller)
-        
+
+        self.handle_no_alarms_label()
+
 
     def add_alarm(self, instance):
         self.alarm_count += 1
@@ -123,11 +126,35 @@ class AlarmRoot(FloatLayout):
         if self.alarm_count >= 8:
             self.alarm_scroller.scroll_to(new_alarm)
 
+        self.handle_no_alarms_label()
+
+    
+    def handle_no_alarms_label(self):
+        if self.alarm_count == 0:
+            self.no_alarms_label = Label(text=("No alarms set\n"
+                                         "Press + to set an alarm"),
+                                         font_size=TENTH_WIDTH*0.6,
+                                         size_hint=(None, None),
+                                         size=(Window.width//10, Window.height//8),
+                                         pos_hint={'center_x':0.5, 'center_y':0.5},
+                                         halign='center',
+                                         valign='middle')
+            self.add_widget(self.no_alarms_label)
+        
+        elif self.alarm_count > 0:
+            self.remove_widget(self.no_alarms_label)
+        else:
+            raise ValueError((f"self.alarm_count ({self.alarm_count}) "
+                               "cannot be a negative number)"))
+
 
     def delete_alarm(self, alarm):
         alarm.clear_widgets()
         self.alarm_grid.remove_widget(alarm)
         self.alarm_count -= 1
+
+        self.handle_no_alarms_label()
+
 
     def sort_alarms(self):
         alarm_list = []
@@ -260,13 +287,60 @@ class AlarmRoot(FloatLayout):
         for alarm_child in self.alarm_grid.children:
             if (alarm_child is not alarm) and (alarm_child.time == alarm.time):
                 self.delete_alarm(alarm_child)
+                self.play_alarm_exists_notif(alarm)
                 break
 
         self.sort_alarms()
 
         alarm.is_first_time_pick = False
+        
+        self.handle_no_alarms_label()
 
         time_picker.dismiss()
+
+
+    def get_time_as_string(self, int_time):
+        time = datetime.datetime.strptime(
+                f"{int_time:04}", "%H%M").strftime("%I:%M %p")
+        if time[0] == '0':
+            time = time[1:]
+        return time
+
+
+    def play_alarm_exists_notif(self, alarm):
+        self.exists_notif_bg = Button(text='',
+                                      background_color=(0.2, 0.2, 0.2, 1),
+                                      disabled=True,
+                                      background_disabled_normal='',
+                                      size_hint=(0.9, 0.10),
+                                      pos_hint={'center_x':0.5, 
+                                                'center_y':0.875}
+                                      )
+
+        self.exists_notif_text = Label(text=('Alarm already set for ' +
+                                          self.get_time_as_string(alarm.time) +
+                                          '\nDeleted duplicate alarm'),
+                                       size_hint=(0.9, 0.05),
+        #NEED TO SET SIZE TO A LITTLE LESS THAN THE ALARM 
+        #AND THEN CENTER IT ON THE TOP ALARM
+        #DO THIS FOR ABOVE
+        #ALSO THERE IS A BUG WHERE THE ALARM COUNT IS GETTING
+        #DECREASED BY ONE SOMEWHERE, FIX THAT AFTER
+                                       font_size=TENTH_WIDTH*0.6,
+                                       pos_hint={'center_x':0.5, 
+                                                 'center_y':0.875},
+                                       halign='center',
+                                       valign='middle')
+
+        self.add_widget(self.exists_notif_bg)
+        self.add_widget(self.exists_notif_text)
+        Clock.schedule_once(lambda *args:
+                            self.remove_alarm_exists_notif(), 4)
+    
+
+    def remove_alarm_exists_notif(self):
+        self.remove_widget(self.exists_notif_bg)
+        self.remove_widget(self.exists_notif_text)
 
 
     def run_time_picker(self, alarm):
