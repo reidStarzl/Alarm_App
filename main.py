@@ -36,6 +36,9 @@ class AlarmRoot(FloatLayout):
         self.alarm_count = 0
         # should have stuff save to storage whenever pause app or smth, load on run
 
+        self.alarm_exists_notif_active = False
+        self.is_duplicate_exists_notif = False
+
         self.new_alarm_button = Button(text='+', 
                                        font_size=TENTH_WIDTH*1.2, 
                                        size_hint=(None, None),
@@ -308,14 +311,29 @@ class AlarmRoot(FloatLayout):
 
 
     def play_alarm_exists_notif(self, alarm):
+        if not self.alarm_exists_notif_active:
+            self.alarm_exists_notif_active = True
+        else:
+            self.is_duplicate_exists_notif = True
+
         self.exists_notif_bg = Button(text='',
                                       background_color=(0.2, 0.2, 0.2, 1),
                                       disabled=True,
                                       background_disabled_normal='',
-                                      size_hint=(0.9, 0.10),
-                                      pos_hint={'center_x':0.5, 
-                                                'center_y':0.875}
-                                      )
+                                      size_hint=(None, None),
+                                      size=(Window.width//10*9, 
+                                            Window.height//10),
+                                      pos=(Window.width//2 - 
+                                           Window.width//10*9//2,
+                                           Window.height -
+                                           (TENTH_WIDTH*1.4 + 
+                                            Window.height//16) - 
+                                            Window.height//10//2
+                                           )
+                                      ) #pos here is set to being below the
+                                        #label bar and aligned with the first
+                                        #alarm. This is done by taking the
+                                        #center position minus half of the size
 
         self.exists_notif_text = Label(text=('Alarm already set for ' +
                                           self.get_time_as_string(alarm.time) +
@@ -331,16 +349,26 @@ class AlarmRoot(FloatLayout):
                                                  'center_y':0.875},
                                        halign='center',
                                        valign='middle')
-
+        
+        self.remove_widget(self.exists_notif_bg)
+        self.remove_widget(self.exists_notif_text)
         self.add_widget(self.exists_notif_bg)
         self.add_widget(self.exists_notif_text)
         Clock.schedule_once(lambda *args:
                             self.remove_alarm_exists_notif(), 4)
     
+# Just use event.cancel()
+
 
     def remove_alarm_exists_notif(self):
-        self.remove_widget(self.exists_notif_bg)
-        self.remove_widget(self.exists_notif_text)
+        if self.is_duplicate_exists_notif:
+            self.is_duplicate_exists_notif = False
+            print("Setting duplicate to false:")
+        else:
+            self.alarm_exists_notif_active = False
+            self.remove_widget(self.exists_notif_bg)
+            self.remove_widget(self.exists_notif_text)
+            print("Removing notif:")
 
 
     def run_time_picker(self, alarm):
