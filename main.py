@@ -37,7 +37,6 @@ class AlarmRoot(FloatLayout):
         # should have stuff save to storage whenever pause app or smth, load on run
 
         self.alarm_exists_notif_active = False
-        self.is_duplicate_exists_notif = False
 
         self.new_alarm_button = Button(text='+', 
                                        font_size=TENTH_WIDTH*1.2, 
@@ -311,10 +310,10 @@ class AlarmRoot(FloatLayout):
 
 
     def play_alarm_exists_notif(self, alarm):
-        if not self.alarm_exists_notif_active:
-            self.alarm_exists_notif_active = True
-        else:
-            self.is_duplicate_exists_notif = True
+        #handling notif already existing
+        if self.alarm_exists_notif_active:
+            self.alarm_exists_notif.cancel()
+            self.remove_alarm_exists_notif()
 
         self.exists_notif_bg = Button(text='',
                                       background_color=(0.2, 0.2, 0.2, 1),
@@ -339,11 +338,6 @@ class AlarmRoot(FloatLayout):
                                           self.get_time_as_string(alarm.time) +
                                           '\nDeleted duplicate alarm'),
                                        size_hint=(0.9, 0.05),
-        #NEED TO SET SIZE TO A LITTLE LESS THAN THE ALARM 
-        #AND THEN CENTER IT ON THE TOP ALARM
-        #DO THIS FOR ABOVE
-        #ALSO THERE IS A BUG WHERE THE ALARM COUNT IS GETTING
-        #DECREASED BY ONE SOMEWHERE, FIX THAT AFTER
                                        font_size=TENTH_WIDTH*0.6,
                                        pos_hint={'center_x':0.5, 
                                                  'center_y':0.875},
@@ -354,21 +348,17 @@ class AlarmRoot(FloatLayout):
         self.remove_widget(self.exists_notif_text)
         self.add_widget(self.exists_notif_bg)
         self.add_widget(self.exists_notif_text)
-        Clock.schedule_once(lambda *args:
-                            self.remove_alarm_exists_notif(), 4)
-    
-# Just use event.cancel()
+        
+        self.alarm_exists_notif = Clock.schedule_once(lambda *args:
+                                        self.remove_alarm_exists_notif(), 4)
+        
+        self.alarm_exists_notif_active = True
 
 
     def remove_alarm_exists_notif(self):
-        if self.is_duplicate_exists_notif:
-            self.is_duplicate_exists_notif = False
-            print("Setting duplicate to false:")
-        else:
-            self.alarm_exists_notif_active = False
-            self.remove_widget(self.exists_notif_bg)
-            self.remove_widget(self.exists_notif_text)
-            print("Removing notif:")
+        self.alarm_exists_notif_active = False
+        self.remove_widget(self.exists_notif_bg)
+        self.remove_widget(self.exists_notif_text)
 
 
     def run_time_picker(self, alarm):
@@ -380,18 +370,19 @@ class AlarmRoot(FloatLayout):
                 on_ok=lambda *args: self.set_alarm_time(alarm, time_picker))
         time_picker.bind(
                 on_dismiss=lambda *args: 
-                self.dismiss_time_picker(alarm, time_picker))
+                self.dismiss_time_picker(alarm, time_picker, True))
         time_picker.bind(
                 on_cancel=lambda *args:
-                self.dismiss_time_picker(alarm, time_picker))
+                self.dismiss_time_picker(alarm, time_picker, False))
        
         time_picker.open()
 
 
-    def dismiss_time_picker(self, alarm, time_picker):
+    def dismiss_time_picker(self, alarm, time_picker, is_on_dismiss):
         if alarm.is_first_time_pick:
             self.delete_alarm(alarm)
-        time_picker.dismiss()
+        if not is_on_dismiss:
+            time_picker.dismiss()
 
 
 class AlarmApp(MDApp):
